@@ -142,6 +142,8 @@ def print_image_formatted(client, image):
     print "Location: %s" % image['location']
     print "Disk format: %s" % image['disk_format']
     print "Container format: %s" % image['container_format']
+    print "Minimum Ram Required (MB): %s" % image['min_ram']
+    print "Minimum Disk Required (GB): %s" % image['min_disk']
     if image['owner']:
         print "Owner: %s" % image['owner']
     if len(image['properties']) > 0:

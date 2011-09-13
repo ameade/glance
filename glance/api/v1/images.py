@@ -130,6 +130,8 @@ class Controller(api.BaseController):
                  'disk_format': <DISK_FORMAT>,
                  'container_format': <CONTAINER_FORMAT>,
                  'checksum': <CHECKSUM>,
+                 'min_disk': <MIN_DISK>,
+                 'min_ram': <MIN_RAM>,
                  'store': <STORE>,
                  'status': <STATUS>,
                  'created_at': <TIMESTAMP>,

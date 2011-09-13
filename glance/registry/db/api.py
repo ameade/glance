@@ -47,8 +47,8 @@ BASE_MODEL_ATTRS = set(['id', 'created_at', 'updated_at', 'deleted_at',
 
 IMAGE_ATTRS = BASE_MODEL_ATTRS | set(['name', 'status', 'size',
                                       'disk_format', 'container_format',
-                                      'is_public', 'location', 'checksum',
-                                      'owner'])
+                                      'min_disk', 'min_ram', 'is_public',
+                                      'location', 'checksum', 'owner'])
 
 CONTAINER_FORMATS = ['ami', 'ari', 'aki', 'bare', 'ovf']
 DISK_FORMATS = ['ami', 'ari', 'aki', 'vhd', 'vmdk', 'raw', 'qcow2', 'vdi',

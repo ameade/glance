@@ -62,6 +62,8 @@ class TestRegistryAPI(unittest.TestCase):
              'deleted_at': None,
              'deleted': False,
              'checksum': None,
+             'min_disk': 0,
+             'min_ram': 0,
              'size': 13,
              'location': "swift://user:passwd@acct/container/obj.tar.0",
              'properties': {'type': 'kernel'}},
@@ -76,6 +78,8 @@ class TestRegistryAPI(unittest.TestCase):
              'deleted_at': None,
              'deleted': False,
              'checksum': None,
+             'min_disk': 5,
+             'min_ram': 256,
              'size': 19,
              'location': "file:///tmp/glance-tests/2",
              'properties': {}}]
@@ -107,6 +111,8 @@ class TestRegistryAPI(unittest.TestCase):
         fixture = {'id': 2,
                    'name': 'fake image #2',
                    'size': 19,
+                   'min_ram': 256,
+                   'min_disk': 5,
                    'checksum': None}
         req = webob.Request.blank('/images/2')
         res = req.get_response(self.api)
@@ -779,6 +785,8 @@ class TestRegistryAPI(unittest.TestCase):
                    'name': 'fake image #2',
                    'is_public': True,
                    'size': 19,
+                   'min_disk': 5,
+                   'min_ram': 256,
                    'checksum': None,
                    'disk_format': 'vhd',
                    'container_format': 'ovf',
@@ -1307,6 +1315,92 @@ class TestRegistryAPI(unittest.TestCase):
         # Test status was updated properly
         self.assertEquals('active', res_dict['image']['status'])
 
+    def test_create_image_with_min_disk(self):
+        """Tests that the /images POST registry API creates the image"""
+        fixture = {'name': 'fake public image',
+                   'is_public': True,
+                   'min_disk': 5,
+                   'disk_format': 'vhd',
+                   'container_format': 'ovf'}
+
+        req = webob.Request.blank('/images')
+
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(dict(image=fixture))
+
+        res = req.get_response(self.api)
+
+        self.assertEquals(res.status_int, 200)
+
+        res_dict = json.loads(res.body)
+
+        self.assertEquals(5, res_dict['image']['min_disk'])
+
+    def test_create_image_with_min_ram(self):
+        """Tests that the /images POST registry API creates the image"""
+        fixture = {'name': 'fake public image',
+                   'is_public': True,
+                   'min_ram': 256,
+                   'disk_format': 'vhd',
+                   'container_format': 'ovf'}
+
+        req = webob.Request.blank('/images')
+
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(dict(image=fixture))
+
+        res = req.get_response(self.api)
+
+        self.assertEquals(res.status_int, 200)
+
+        res_dict = json.loads(res.body)
+
+        self.assertEquals(256, res_dict['image']['min_ram'])
+
+    def test_create_image_with_min_ram_default(self):
+        """Tests that the /images POST registry API creates the image"""
+        fixture = {'name': 'fake public image',
+                   'is_public': True,
+                   'disk_format': 'vhd',
+                   'container_format': 'ovf'}
+
+        req = webob.Request.blank('/images')
+
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(dict(image=fixture))
+
+        res = req.get_response(self.api)
+
+        self.assertEquals(res.status_int, 200)
+
+        res_dict = json.loads(res.body)
+
+        self.assertEquals(0, res_dict['image']['min_ram'])
+
+    def test_create_image_with_min_disk_default(self):
+        """Tests that the /images POST registry API creates the image"""
+        fixture = {'name': 'fake public image',
+                   'is_public': True,
+                   'disk_format': 'vhd',
+                   'container_format': 'ovf'}
+
+        req = webob.Request.blank('/images')
+
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(dict(image=fixture))
+
+        res = req.get_response(self.api)
+
+        self.assertEquals(res.status_int, 200)
+
+        res_dict = json.loads(res.body)
+
+        self.assertEquals(0, res_dict['image']['min_disk'])
+
     def test_create_image_with_bad_container_format(self):
         """Tests proper exception is raised if a bad disk_format is set"""
         fixture = {'id': 3,
@@ -1385,6 +1479,8 @@ class TestRegistryAPI(unittest.TestCase):
     def test_update_image(self):
         """Tests that the /images PUT registry API updates the image"""
         fixture = {'name': 'fake public image #2',
+                   'min_disk': 5,
+                   'min_ram': 256,
                    'disk_format': 'raw'}
 
         req = webob.Request.blank('/images/2')
