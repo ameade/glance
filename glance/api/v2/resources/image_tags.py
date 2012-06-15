@@ -45,8 +45,9 @@ class Controller(object):
 
 class ResponseSerializer(wsgi.JSONResponseSerializer):
     def index(self, response, tags):
+        body = {'tags': tags}
         response.content_type = 'application/json'
-        response.body = json.dumps(tags)
+        response.body = json.dumps(body)
 
     def update(self, response, result):
         response.status_int = 204

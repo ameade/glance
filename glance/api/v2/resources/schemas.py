@@ -15,6 +15,7 @@
 
 from glance.api.v2.schemas import image
 from glance.api.v2.schemas import image_access
+from glance.api.v2.schemas import image_tags
 from glance.common import wsgi
 import glance.schema
 
@@ -22,12 +23,14 @@ import glance.schema
 class Controller(object):
     def __init__(self):
         self.access_schema = image_access.get_schema()
+        self.tags_schema = image_tags.get_schema()
         self.image_schema = image.get_schema()
 
     def index(self, req):
         links = [
             {'rel': 'image', 'href': '/v2/schemas/image'},
             {'rel': 'access', 'href': '/v2/schemas/image/access'},
+            {'rel': 'tags', 'href': '/v2/schemas/image/tags'},
         ]
         return {'links': links}
 
@@ -36,6 +39,9 @@ class Controller(object):
 
     def access(self, req):
         return self.access_schema.raw()
+
+    def tags(self, req):
+        return self.tags_schema.raw()
 
 
 def create_resource():

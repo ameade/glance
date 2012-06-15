@@ -30,6 +30,7 @@ class TestSchemasController(test_utils.BaseTestCase):
         expected = {'links': [
             {'rel': 'image', 'href': '/v2/schemas/image'},
             {'rel': 'access', 'href': '/v2/schemas/image/access'},
+            {'rel': 'tags', 'href': '/v2/schemas/image/tags'},
         ]}
         self.assertEqual(expected, output)
 
@@ -42,3 +43,8 @@ class TestSchemasController(test_utils.BaseTestCase):
         req = unit_test_utils.get_fake_request()
         output = self.controller.access(req)
         self.assertEqual(output['name'], 'access')
+
+    def test_tags(self):
+        req = unit_test_utils.get_fake_request()
+        output = self.controller.tags(req)
+        self.assertEqual(output['name'], 'tags')

@@ -57,7 +57,7 @@ class TestImagesSerializer(test_utils.BaseTestCase):
 
     def test_list_tags(self):
         fixtures = ['ping', 'pong']
-        expected = ['ping', 'pong']
+        expected = {'tags': ['ping', 'pong']}
         response = webob.Response()
         self.serializer.index(response, fixtures)
         self.assertEqual(200, response.status_int)

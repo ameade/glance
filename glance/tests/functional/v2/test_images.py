@@ -439,7 +439,7 @@ class TestImages(functional.FunctionalTest):
         response = requests.get(path, headers=self._headers())
         self.assertEqual(200, response.status_code)
         tags = json.loads(response.text)
-        self.assertEqual(['sniff'], tags)
+        self.assertEqual({'tags': ['sniff']}, tags)
 
         # Create another more complex tag
         path = self._url('/images/%s/tags/someone%%40example.com' % image_id)
@@ -451,7 +451,7 @@ class TestImages(functional.FunctionalTest):
         response = requests.get(path, headers=self._headers())
         self.assertEqual(200, response.status_code)
         tags = json.loads(response.text)
-        self.assertEqual(['sniff', 'someone@example.com'], tags)
+        self.assertEqual({'tags': ['sniff', 'someone@example.com']}, tags)
 
         # Double-check that the tags container on the image is populated
         path = self._url('/images/%s' % image_id)
@@ -470,7 +470,7 @@ class TestImages(functional.FunctionalTest):
         response = requests.get(path, headers=self._headers())
         self.assertEqual(200, response.status_code)
         tags = json.loads(response.text)
-        self.assertEqual(['sniff'], tags)
+        self.assertEqual({'tags': ['sniff']}, tags)
 
         # Deleting the same tag should return a 404
         path = self._url('/images/%s/tags/someonei%%40example.com' % image_id)

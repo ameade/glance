@@ -38,8 +38,8 @@ class TestSchemas(functional.FunctionalTest):
         output = json.loads(response.text)
         links = dict([(l['rel'], l['href']) for l in output['links']])
 
-        # We should only have links for image and access schemas
-        self.assertEqual(set(['image', 'access']), set(links.keys()))
+        # We should only have links for image, access and tags schemas
+        self.assertEqual(set(['image', 'access', 'tags']), set(links.keys()))
 
         # Ensure the link works and custom properties are loaded
         path = 'http://%s:%d%s' % ('0.0.0.0', self.api_port, links['image'])
