@@ -121,6 +121,14 @@ class InvalidSortKey(Invalid):
     message = _("Sort key supplied was not valid.")
 
 
+class InvalidFilterKey(Invalid):
+    message = _("Cannot filter images on %(attr)s attribute.")
+
+
+class InvalidFilterRangeValue(Invalid):
+    message = _("Cannot filter on a range of non-numeric values.")
+
+
 class AuthorizationRedirect(GlanceException):
     message = _("Redirecting to %(uri)s for authorization.")
 

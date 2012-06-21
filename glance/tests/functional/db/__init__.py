@@ -121,6 +121,52 @@ class BaseTestCase(object):
         images = self.db_api.image_get_all(self.context)
         self.assertEquals(len(images), 2)
 
+    def test_image_get_all_with_filter(self):
+        images = self.db_api.image_get_all(self.context,
+                                      filters={'id': self.fixtures[0]['id']})
+        self.assertEquals(len(images), 1)
+        self.assertEquals(images[0]['id'], self.fixtures[0]['id'])
+
+    def test_image_get_all_size_min_max(self):
+        images = self.db_api.image_get_all(self.context,
+                                      filters={'size_min': 10,
+                                               'size_max': 15,
+                                              })
+        self.assertEquals(len(images), 1)
+        self.assertEquals(images[0]['id'], self.fixtures[0]['id'])
+
+    def test_image_get_all_size_min(self):
+        images = self.db_api.image_get_all(self.context,
+                                      filters={'size_min': 15})
+        self.assertEquals(len(images), 1)
+        self.assertEquals(images[0]['id'], self.fixtures[1]['id'])
+
+    def test_image_get_all_size_max(self):
+        images = self.db_api.image_get_all(self.context,
+                                      filters={'size_max': 15})
+        self.assertEquals(len(images), 1)
+        self.assertEquals(images[0]['id'], self.fixtures[0]['id'])
+
+    def test_image_get_all_with_filter_range_bad_key(self):
+        self.assertRaises(exception.InvalidFilterKey,
+                          self.db_api.image_get_all,
+                          self.context, filters={'blah_min': 30})
+
+    def test_image_get_all_with_filter_min_range_bad_value(self):
+        self.assertRaises(exception.InvalidFilterRangeValue,
+                          self.db_api.image_get_all,
+                          self.context, filters={'size_min': 'blah'})
+
+    def test_image_get_all_with_filter_max_range_bad_value(self):
+        self.assertRaises(exception.InvalidFilterRangeValue,
+                          self.db_api.image_get_all,
+                          self.context, filters={'size_max': 'blah'})
+
+    def test_image_get_all_bad_filter(self):
+        self.assertRaises(exception.InvalidFilterKey,
+                          self.db_api.image_get_all,
+                          self.context, filters={'blah': 'blah'})
+
     def test_image_get_all_marker(self):
         images = self.db_api.image_get_all(self.context, marker=UUID2)
         self.assertEquals(len(images), 1)

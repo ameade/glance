@@ -80,10 +80,12 @@ class ImagesController(object):
         return self._normalize_properties(dict(image))
 
     def index(self, req, marker=None, limit=None, sort_key='created_at',
-              sort_dir='desc'):
+              sort_dir='desc', filters={}):
+        filters['deleted'] = False
         #NOTE(bcwaldon): is_public=True gets public images and those
         # owned by the authenticated tenant
-        filters = {'deleted': False, 'is_public': True}
+        if not 'is_public' in filters:
+            filters['is_public'] = True
         if limit is None:
             limit = CONF.limit_param_default
         limit = min(CONF.api_limit_max, limit)
@@ -93,6 +95,10 @@ class ImagesController(object):
                                                marker=marker, limit=limit,
                                                sort_key=sort_key,
                                                sort_dir=sort_dir)
+        except exception.InvalidFilterRangeValue as e:
+            raise webob.exc.HTTPBadRequest(explanation=unicode(e))
+        except exception.InvalidFilterKey as e:
+            raise webob.exc.HTTPBadRequest(explanation=unicode(e))
         except exception.InvalidSortKey as e:
             raise webob.exc.HTTPBadRequest(explanation=unicode(e))
         except exception.NotFound as e:
@@ -193,13 +199,38 @@ class RequestDeserializer(wsgi.JSONRequestDeserializer):
 
         return sort_dir
 
+    def _get_filters(self, filters):
+        for (key, value) in filters.iteritems():
+            if key in ['is_public', 'protected']:
+                if value.lower() in ['true', '1', 'yes', 'on']:
+                    filters[key] = True
+                elif value.lower() in ['false', '0', 'no', 'off']:
+                    filters[key] = False
+                else:
+                    msg = _('Invalid value for %s: %s') % (key, value)
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        if 'visibility' in filters:
+            if filters['visibility'] == 'public':
+                filters['is_public'] = True
+            elif filters['visibility'] == 'private':
+                filters['is_public'] = False
+            else:
+                msg = _('Invalid visibility value: %s') % filters['visibility']
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+            del filters['visibility']
+
+        return filters
+
     def index(self, request):
-        limit = request.params.get('limit', None)
-        marker = request.params.get('marker', None)
-        sort_dir = request.params.get('sort_dir', 'desc')
+        params = request.params.copy()
+        limit = params.pop('limit', None)
+        marker = params.pop('marker', None)
+        sort_dir = params.pop('sort_dir', 'desc')
         query_params = {
-            'sort_key': request.params.get('sort_key', 'created_at'),
+            'sort_key': params.pop('sort_key', 'created_at'),
             'sort_dir': self._validate_sort_dir(sort_dir),
+            'filters': self._get_filters(params),
         }
 
         if marker is not None:

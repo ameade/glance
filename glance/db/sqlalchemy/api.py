@@ -35,7 +35,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import or_, and_
 
 from glance.common import exception
-from glance import db
 from glance.db.sqlalchemy import migration
 from glance.db.sqlalchemy import models
 from glance.openstack.common import cfg
@@ -452,14 +451,6 @@ def image_get_all(context, filters=None, marker=None, limit=None,
                     options(joinedload(models.Image.properties)).\
                     options(joinedload(models.Image.members))
 
-    if 'size_min' in filters:
-        query = query.filter(models.Image.size >= filters['size_min'])
-        del filters['size_min']
-
-    if 'size_max' in filters:
-        query = query.filter(models.Image.size <= filters['size_max'])
-        del filters['size_max']
-
     if 'is_public' in filters and filters['is_public'] is not None:
         the_filter = [models.Image.is_public == filters['is_public']]
         if filters['is_public'] and context.owner is not None:
@@ -493,7 +484,23 @@ def image_get_all(context, filters=None, marker=None, limit=None,
 
     for (k, v) in filters.items():
         if v is not None:
-            query = query.filter(getattr(models.Image, k) == v)
+            key = k
+            if k.endswith('_min') or k.endswith('_max'):
+                key = key[0:-4]
+                try:
+                    v = int(v)
+                except ValueError:
+                    raise exception.InvalidFilterRangeValue()
+
+            if not hasattr(models.Image, key):
+                raise exception.InvalidFilterKey(attr=k)
+
+            if k.endswith('_min'):
+                query = query.filter(getattr(models.Image, key) >= v)
+            elif k.endswith('_max'):
+                query = query.filter(getattr(models.Image, key) <= v)
+            else:
+                query = query.filter(getattr(models.Image, key) == v)
 
     marker_image = None
     if marker is not None:

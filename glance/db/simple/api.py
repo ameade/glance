@@ -109,10 +109,38 @@ def image_get(context, image_id, session=None, force_show_deleted=False):
 def image_get_all(context, filters=None, marker=None, limit=None,
                   sort_key='created_at', sort_dir='desc'):
     filters = filters or {}
+    images_copy = DATA['images'].values()
+    images = []
+    # Do filtering
+    if filters:
+        for i, image in enumerate(images_copy):
+            add = True
+            for k, value in filters.iteritems():
+                key = k
+                if k.endswith('_min') or k.endswith('_max'):
+                    key = key[0:-4]
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        raise exception.InvalidFilterRangeValue()
+                if k.endswith('_min'):
+                    add = image.get(key) >= value
+                elif k.endswith('_max'):
+                    add = image.get(key) <= value
+                elif image.get(k) is not None:
+                    add = image.get(key) == value
+                elif not key in ['deleted', 'is_public']:
+                    raise exception.InvalidFilterKey(attr=k)
+                if not add:
+                    break
+
+            if add:
+                images.append(image)
+
+    # Do Pagination
     reverse = False
     start = 0
     end = -1
-    images = DATA['images'].values()
     if images and not images[0].get(sort_key):
         raise exception.InvalidSortKey()
     keyfn = lambda x: (x[sort_key], x['created_at'], x['id'])
