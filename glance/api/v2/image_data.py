@@ -56,7 +56,7 @@ class ImageDataController(object):
         except exception.Duplicate:
             raise webob.exc.HTTPConflict()
 
-        v2.update_image_read_acl(req, self.db_api, image)
+        v2.update_image_read_acl(req, self.store_api, self.db_api, image)
 
         values = {'location': location, 'size': size, 'checksum': checksum}
         self.db_api.image_update(req.context, image_id, values)
