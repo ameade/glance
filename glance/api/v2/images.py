@@ -297,7 +297,8 @@ class RequestDeserializer(wsgi.JSONRequestDeserializer):
             'deleted', 'deleted_at']
     _base_properties = ['checksum', 'created_at', 'container_format',
             'disk_format', 'id', 'min_disk', 'min_ram', 'name', 'size',
-            'status', 'tags', 'updated_at', 'visibility', 'protected']
+            'status', 'tags', 'updated_at', 'visibility', 'protected',
+            'parent']
 
     def __init__(self, schema=None):
         super(RequestDeserializer, self).__init__()
@@ -530,7 +531,8 @@ class ResponseSerializer(wsgi.JSONResponseSerializer):
         image_view = image['properties']
         attributes = ['id', 'name', 'disk_format', 'container_format',
                       'size', 'status', 'checksum', 'tags', 'protected',
-                      'created_at', 'updated_at', 'min_ram', 'min_disk']
+                      'created_at', 'updated_at', 'min_ram', 'min_disk',
+                      'parent']
         for key in attributes:
             image_view[key] = image[key]
 

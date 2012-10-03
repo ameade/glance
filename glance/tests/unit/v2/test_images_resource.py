@@ -335,6 +335,13 @@ class TestImagesController(test_utils.BaseTestCase):
         }
         self.assertEqual(output_log, expected_log)
 
+    def test_create_with_parent(self):
+        request = unit_test_utils.get_fake_request()
+        image = {'name': 'image-1', 'parent': UUID2}
+        output = self.controller.create(request, image)
+        self.assertEqual('image-1', output['name'])
+        self.assertEqual(UUID2, output['parent'])
+
     def test_create_public_image_as_admin(self):
         request = unit_test_utils.get_fake_request()
         image = {'name': 'image-1', 'is_public': True}

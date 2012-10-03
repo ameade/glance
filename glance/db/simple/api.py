@@ -308,7 +308,7 @@ def image_create(context, image_values):
                         'checksum', 'location', 'owner', 'protected',
                         'is_public', 'container_format', 'disk_format',
                         'created_at', 'updated_at', 'deleted_at', 'deleted',
-                        'properties', 'tags'])
+                        'properties', 'tags', 'parent'])
 
     if set(image_values.keys()) - allowed_keys:
         raise exception.Invalid()
