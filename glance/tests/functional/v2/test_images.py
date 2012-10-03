@@ -51,6 +51,70 @@ class TestImages(functional.FunctionalTest):
         base_headers.update(custom_headers or {})
         return base_headers
 
+    def test_image_parent_child_lifecycle(self):
+        # Image list should be empty
+        path = self._url('/v2/images')
+        response = requests.get(path, headers=self._headers())
+        self.assertEqual(200, response.status_code)
+        images = json.loads(response.text)['images']
+        self.assertEqual(0, len(images))
+
+        # Create a parent image
+        path = self._url('/v2/images')
+        headers = self._headers({'content-type': 'application/json'})
+        data = json.dumps({'name': 'image-1'})
+        response = requests.post(path, headers=headers, data=data)
+        self.assertEqual(201, response.status_code)
+
+        # Returned image entity should have a generated id and status
+        image = json.loads(response.text)
+        parent_id = image['id']
+        self.assertEqual(image['status'], 'queued')
+
+        # Create a child image
+        path = self._url('/v2/images')
+        headers = self._headers({'content-type': 'application/json'})
+        data = json.dumps({'name': 'image-2', 'parent': parent_id})
+        response = requests.post(path, headers=headers, data=data)
+        self.assertEqual(201, response.status_code)
+
+        # Returned image entity should have a generated id and status
+        image = json.loads(response.text)
+        child_id = image['id']
+        self.assertEqual(image['status'], 'queued')
+
+        # Ensure correct image chain
+        path = self._url('/v2/images?ancestors=%s' % child_id)
+        response = requests.get(path, headers=self._headers())
+        self.assertEqual(200, response.status_code)
+        images = json.loads(response.text)['images']
+        self.assertEqual(images[0]['id'], parent_id)
+        self.assertEqual(images[1]['id'], child_id)
+
+        # Deletion should not work on parent images
+        path = self._url('/v2/images/%s' % parent_id)
+        response = requests.delete(path, headers=self._headers())
+        self.assertEqual(409, response.status_code)
+
+        # Delete child image
+        path = self._url('/v2/images/%s' % child_id)
+        response = requests.delete(path, headers=self._headers())
+        self.assertEqual(204, response.status_code)
+
+        # Deletion should now work on parent images
+        path = self._url('/v2/images/%s' % parent_id)
+        response = requests.delete(path, headers=self._headers())
+        self.assertEqual(204, response.status_code)
+
+        # Image list should now be empty
+        path = self._url('/v2/images')
+        response = requests.get(path, headers=self._headers())
+        self.assertEqual(200, response.status_code)
+        images = json.loads(response.text)['images']
+        self.assertEqual(0, len(images))
+
+        self.stop_servers()
+
     def test_image_lifecycle(self):
         # Image list should be empty
         path = self._url('/v2/images')

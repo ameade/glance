@@ -56,6 +56,7 @@ def _fixture(id, **kwargs):
         'properties': {},
         'checksum': None,
         'owner': None,
+        'parent': None,
         'status': 'queued',
         'tags': [],
         'size': None,
@@ -219,6 +220,15 @@ class TestImagesController(test_utils.BaseTestCase):
         path = '/images'
         request = unit_test_utils.get_fake_request(path)
         output = self.controller.index(request, marker=UUID3)
+        actual = set([image['id'] for image in output['images']])
+        self.assertEquals(1, len(actual))
+        self.assertTrue(UUID2 in actual)
+
+    def test_index_with_ancestors_filter(self):
+        path = '/images?ancestors_of=%s' % UUID2
+        request = unit_test_utils.get_fake_request(path)
+        output = self.controller.index(request,
+                                       filters={'ancestors_of': UUID2})
         actual = set([image['id'] for image in output['images']])
         self.assertEquals(1, len(actual))
         self.assertTrue(UUID2 in actual)
@@ -559,6 +569,13 @@ class TestImagesController(test_utils.BaseTestCase):
         self.assertTrue(deleted_img['deleted'])
         self.assertEqual(deleted_img['status'], 'deleted')
         self.assertFalse(filter(lambda k: UUID1 in k, self.store.data))
+
+    def test_delete_parent(self):
+        request = unit_test_utils.get_fake_request()
+        self.db.image_create(request.context,
+                             {'parent': UUID2, 'status': 'queued'})
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.delete, request, UUID2)
 
     def test_delete_queued_updates_status(self):
         """Ensure status of queued image is updated (LP bug #1048851)"""

@@ -113,6 +113,17 @@ class ImagesController(object):
     def index(self, req, marker=None, limit=None, sort_key='created_at',
               sort_dir='desc', filters={}):
         self._enforce(req, 'get_images')
+
+        leaf_image = filters.get('ancestors_of')
+        if leaf_image:
+            images = self.db_api.image_get_ancestors(req.context, leaf_image)
+            images = [self._normalize_properties(dict(image))
+                            for image in images]
+            result = {}
+            result['images'] = [self._append_tags(req.context, image)
+                                for image in images]
+            return result
+
         filters['deleted'] = False
         #NOTE(bcwaldon): is_public=True gets public images and those
         # owned by the authenticated tenant
@@ -267,6 +278,11 @@ class ImagesController(object):
             msg = _("Unable to delete as image %(image_id)s is protected"
                     % locals())
             raise webob.exc.HTTPForbidden(explanation=msg)
+
+        if self.db_api.image_get_number_of_children(req.context, image_id):
+            msg = _("Unable to delete as image %(image_id)s is a parent"
+                    % locals())
+            raise webob.exc.HTTPConflict(explanation=msg)
 
         status = 'deleted'
         if image['location']:

@@ -84,6 +84,7 @@ def _image_format(image_id, **values):
         'id': image_id,
         'name': None,
         'owner': None,
+        'parent': None,
         'location': None,
         'status': 'queued',
         'protected': False,
@@ -221,6 +222,25 @@ def image_get(context, image_id, session=None, force_show_deleted=False):
         raise exception.Forbidden()
 
     return image
+
+
+@log_call
+def image_get_number_of_children(context, uuid):
+    images = DATA['images'].values()
+    images = filter(lambda img: img['parent'] == uuid, images)
+    return len(images)
+
+
+@log_call
+def image_get_ancestors(context, uuid):
+    all_images = DATA['images'].values()
+    images = [image_get(context, uuid)]
+    while not images[-1]['parent'] is None:
+        for image in all_images:
+            if image['id'] == images[-1]['parent']:
+                images.append(image)
+                break
+    return reversed(images)
 
 
 @log_call
