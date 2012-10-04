@@ -300,6 +300,10 @@ class Controller(object):
         :retval Returns 200 if delete was successful, a fault if not. On
         success, the body contains the deleted image information as a mapping.
         """
+        if self.db_api.image_get_number_of_children(req.context, id):
+            msg = _("Unable to delete as image %s is a parent.") % id
+            raise exc.HTTPForbidden(explanation=msg)
+
         try:
             deleted_image = self.db_api.image_destroy(req.context, id)
             msg = _("Successfully deleted image %(id)s")

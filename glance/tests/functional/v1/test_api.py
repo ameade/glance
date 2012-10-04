@@ -454,6 +454,13 @@ class TestApi(functional.FunctionalTest):
         self.assertEqual(response.status, 200)
         self.assertEqual(response['x-image-meta-parent'], parent_id)
 
+        #try to delete parent
+        path = "http://%s:%d/v1/images/%s" % ("127.0.0.1", self.api_port,
+        parent_id)
+        http = httplib2.Http()
+        response, content = http.request(path, 'DELETE')
+        self.assertEqual(response.status, 403)
+
         self.stop_servers()
 
     @skip_if_disabled
