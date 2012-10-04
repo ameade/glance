@@ -1559,6 +1559,31 @@ class TestRegistryAPI(base.IsolatedUnitTest):
         # Test status was updated properly
         self.assertEquals('active', res_dict['image']['status'])
 
+    def test_create_image_with_parent(self):
+        fixture = {'name': 'fake public image',
+                   'parent': UUID2,
+                   'is_public': True,
+                   'disk_format': 'vhd',
+                   'container_format': 'ovf'}
+
+        req = webob.Request.blank('/images')
+
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(dict(image=fixture))
+
+        res = req.get_response(self.api)
+
+        self.assertEquals(res.status_int, 200)
+
+        res_dict = json.loads(res.body)
+
+        for k, v in fixture.iteritems():
+            self.assertEquals(v, res_dict['image'][k])
+
+        # Test status was updated properly
+        self.assertEquals('active', res_dict['image']['status'])
+
     def test_create_image_with_min_disk(self):
         """Tests that the /images POST registry API creates the image"""
         fixture = {'name': 'fake public image',

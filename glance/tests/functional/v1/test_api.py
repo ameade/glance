@@ -406,6 +406,57 @@ class TestApi(functional.FunctionalTest):
         self.stop_servers()
 
     @skip_if_disabled
+    def test_image_hierarchy(self):
+        self.cleanup()
+        self.start_servers(**self.__dict__.copy())
+
+        # 1. POST /images
+        headers = {'Content-Type': 'application/octet-stream',
+                   'X-Image-Meta-Location': 'http://example.com/fakeimage',
+                   'X-Image-Meta-Size': str(FIVE_GB),
+                   'X-Image-Meta-Name': 'Image1',
+                   'X-Image-Meta-disk_format': 'raw',
+                   'X-image-Meta-container_format': 'ovf',
+                   'X-Image-Meta-Is-Public': 'True'}
+        path = "http://%s:%d/v1/images" % ("127.0.0.1", self.api_port)
+        http = httplib2.Http()
+        response, content = http.request(path, 'POST', headers=headers)
+        self.assertEqual(response.status, 201)
+
+        # 2. HEAD /images
+        # Verify image size is what was passed in, and not truncated
+        path = response.get('location')
+        http = httplib2.Http()
+        response, content = http.request(path, 'HEAD')
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response['x-image-meta-name'], 'Image1')
+        parent_id = response['x-image-meta-id']
+
+        # 1. POST /images with parent
+        headers = {'Content-Type': 'application/octet-stream',
+                   'X-Image-Meta-Location': 'http://example.com/fakeimage',
+                   'X-Image-Meta-Size': str(FIVE_GB),
+                   'X-Image-Meta-Name': 'Image2',
+                   'X-Image-Meta-Parent': parent_id,
+                   'X-Image-Meta-disk_format': 'raw',
+                   'X-image-Meta-container_format': 'ovf',
+                   'X-Image-Meta-Is-Public': 'True'}
+        path = "http://%s:%d/v1/images" % ("127.0.0.1", self.api_port)
+        http = httplib2.Http()
+        response, content = http.request(path, 'POST', headers=headers)
+        self.assertEqual(response.status, 201)
+
+        # 2. HEAD /images
+        # Verify image size is what was passed in, and not truncated
+        path = response.get('location')
+        http = httplib2.Http()
+        response, content = http.request(path, 'HEAD')
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response['x-image-meta-parent'], parent_id)
+
+        self.stop_servers()
+
+    @skip_if_disabled
     def test_size_greater_2G_mysql(self):
         """
         A test against the actual datastore backend for the registry
