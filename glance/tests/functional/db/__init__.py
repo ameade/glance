@@ -234,6 +234,32 @@ class BaseTestCase(object):
         self.assertRaises(exception.NotFound,
                           self.db_api.image_get, self.context, UUID)
 
+    def test_image_get_number_of_children(self):
+        fixture = {'name': 'blah',
+                   'parent': UUID2,
+                   'size': 12,
+                   'status': 'queued'}
+        uuid = self.db_api.image_create(self.context, fixture)['id']
+        images = self.db_api.image_get_number_of_children(self.context, UUID2)
+        self.assertEquals(1, images)
+
+    def test_image_get_number_of_children_no_children(self):
+        images = self.db_api.image_get_number_of_children(self.context, UUID2)
+        self.assertEquals(0, images)
+
+    def test_image_get_ancestors(self):
+        images = self.db_api.image_get_ancestors(self.context, UUID1)
+        self.assertEquals(1, len(images))
+
+    def test_image_get_ancestors_with_parent(self):
+        fixture = {'name': 'blah',
+                   'parent': UUID2,
+                   'size': 12,
+                   'status': 'queued'}
+        uuid = self.db_api.image_create(self.context, fixture)['id']
+        images = self.db_api.image_get_ancestors(self.context, uuid)
+        self.assertEquals(2, len(images))
+
     def test_image_get_all(self):
         images = self.db_api.image_get_all(self.context)
         self.assertEquals(3, len(images))

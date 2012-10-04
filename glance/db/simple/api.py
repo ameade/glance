@@ -84,6 +84,7 @@ def _image_format(image_id, **values):
         'id': image_id,
         'name': None,
         'owner': None,
+        'parent': None,
         'location': None,
         'status': 'queued',
         'protected': False,
@@ -224,6 +225,25 @@ def image_get(context, image_id, session=None, force_show_deleted=False):
 
 
 @log_call
+def image_get_number_of_children(context, uuid):
+    images = DATA['images'].values()
+    images = filter(lambda img: img['parent'] == uuid, images)
+    return len(images)
+
+
+@log_call
+def image_get_ancestors(context, uuid):
+    all_images = DATA['images'].values()
+    images = [image_get(context, uuid)]
+    while not images[-1]['parent'] is None:
+        for image in all_images:
+            if image['id'] == images[-1]['parent']:
+                images.append(image)
+                break
+    return [i for i in reversed(images)]
+
+
+@log_call
 def image_get_all(context, filters=None, marker=None, limit=None,
                   sort_key='created_at', sort_dir='desc'):
     filters = filters or {}
@@ -308,7 +328,7 @@ def image_create(context, image_values):
                         'checksum', 'location', 'owner', 'protected',
                         'is_public', 'container_format', 'disk_format',
                         'created_at', 'updated_at', 'deleted_at', 'deleted',
-                        'properties', 'tags'])
+                        'properties', 'tags', 'parent'])
 
     if set(image_values.keys()) - allowed_keys:
         raise exception.Invalid()

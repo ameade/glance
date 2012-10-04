@@ -435,7 +435,7 @@ def image_get_ancestors(context, uuid):
                 .options(sa_orm.joinedload(models.Image.properties))
         query = query.filter_by(id=images[-1]['parent'])
         images.append(query.one())
-    return reversed(images)
+    return [i for i in reversed(images)]
 
 
 def image_get_number_of_children(context, uuid):
