@@ -427,6 +427,25 @@ def paginate_query(query, model, limit, sort_keys, marker=None,
     return query
 
 
+def image_get_ancestors(context, uuid):
+    session = get_session()
+    images = [image_get(context, uuid)]
+    while not images[-1]['parent'] is None:
+        query = session.query(models.Image)\
+                .options(sa_orm.joinedload(models.Image.properties))
+        query = query.filter_by(id=images[-1]['parent'])
+        images.append(query.one())
+    return reversed(images)
+
+
+def image_get_number_of_children(context, uuid):
+    session = get_session()
+    query = session.query(models.Image)
+    query = query.filter_by(parent=uuid)
+    query = query.filter_by(deleted=False)
+    return query.count()
+
+
 def image_get_all(context, filters=None, marker=None, limit=None,
                   sort_key='created_at', sort_dir='desc'):
     """

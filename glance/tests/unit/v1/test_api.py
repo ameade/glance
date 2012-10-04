@@ -945,6 +945,42 @@ class TestRegistryAPI(base.IsolatedUnitTest):
         for image in images:
             self.assertEqual('new name! #123', image['name'])
 
+    def test_get_details_filter_ancestors_of(self):
+        parent_id = _gen_uuid()
+        extra_fixture = {'id': parent_id,
+                         'status': 'active',
+                         'is_public': True,
+                         'disk_format': 'vhd',
+                         'container_format': 'ovf',
+                         'name': 'new name! #123',
+                         'size': 19,
+                         'checksum': None}
+
+        db_api.image_create(self.context, extra_fixture)
+
+        child_id = _gen_uuid()
+        extra_fixture = {'id': child_id,
+                         'parent': parent_id,
+                         'status': 'active',
+                         'is_public': True,
+                         'disk_format': 'vhd',
+                         'container_format': 'ovf',
+                         'name': 'new name! #123',
+                         'size': 20,
+                         'checksum': None}
+
+        db_api.image_create(self.context, extra_fixture)
+
+        req = webob.Request.blank('/images/detail?ancestors_of=%s' % child_id)
+        res = req.get_response(self.api)
+        res_dict = json.loads(res.body)
+        self.assertEquals(res.status_int, 200)
+
+        images = res_dict['images']
+        self.assertEquals(len(images), 2)
+        self.assertEqual(parent_id, images[0]['id'])
+        self.assertEqual(child_id, images[1]['id'])
+
     def test_get_details_filter_status(self):
         """
         Tests that the /images/detail registry API returns list of

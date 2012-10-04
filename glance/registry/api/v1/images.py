@@ -40,7 +40,7 @@ DISPLAY_FIELDS_IN_INDEX = ['id', 'name', 'size',
 
 SUPPORTED_FILTERS = ['name', 'parent', 'status', 'container_format', 'disk_format',
                      'min_ram', 'min_disk', 'size_min', 'size_max',
-                     'changes-since', 'protected']
+                     'changes-since', 'protected', 'ancestors_of']
 
 SUPPORTED_SORT_KEYS = ('name', 'status', 'container_format', 'disk_format',
                        'size', 'id', 'created_at', 'updated_at')
@@ -113,7 +113,11 @@ class Controller(object):
         """
         params = self._get_query_params(req)
 
-        images = self._get_images(req.context, **params)
+        leaf_image = params['filters'].get('ancestors_of')
+        if leaf_image:
+            images = self.db_api.image_get_ancestors(req.context, leaf_image)
+        else:
+            images = self._get_images(req.context, **params)
         image_dicts = [make_image_dict(i) for i in images]
         LOG.info(_("Returning detailed image list"))
         return dict(images=image_dicts)
