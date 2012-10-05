@@ -453,13 +453,28 @@ class TestApi(functional.FunctionalTest):
         response, content = http.request(path, 'HEAD')
         self.assertEqual(response.status, 200)
         self.assertEqual(response['x-image-meta-parent'], parent_id)
+        child_id = response['x-image-meta-id']
 
-        #try to delete parent
+        #try to delete parent, should fail
         path = "http://%s:%d/v1/images/%s" % ("127.0.0.1", self.api_port,
         parent_id)
         http = httplib2.Http()
         response, content = http.request(path, 'DELETE')
         self.assertEqual(response.status, 403)
+
+        # Delete the child
+        path = "http://%s:%d/v1/images/%s" % ("127.0.0.1", self.api_port,
+                                              child_id)
+        http = httplib2.Http()
+        response, content = http.request(path, 'DELETE')
+        self.assertEqual(response.status, 200)
+
+        #try to delete parent, should work since child is deleted
+        path = "http://%s:%d/v1/images/%s" % ("127.0.0.1", self.api_port,
+        parent_id)
+        http = httplib2.Http()
+        response, content = http.request(path, 'DELETE')
+        self.assertEqual(response.status, 200)
 
         self.stop_servers()
 

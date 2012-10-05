@@ -113,9 +113,9 @@ class Controller(object):
         """
         params = self._get_query_params(req)
 
-        leaf_image = params['filters'].get('ancestors_of')
-        if leaf_image:
-            images = self.db_api.image_get_ancestors(req.context, leaf_image)
+        child_image = params['filters'].get('ancestors_of')
+        if child_image:
+            images = self.db_api.image_get_ancestors(req.context, child_image)
         else:
             images = self._get_images(req.context, **params)
         image_dicts = [make_image_dict(i) for i in images]
