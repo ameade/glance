@@ -64,6 +64,7 @@ def safe_kill(req, image_id):
                     "%(exc)s") % ({'id': image_id,
                                    'exc': repr(e)}))
 
+
 def upload_data_to_store(req, image_meta, image_data, store):
     image_id = image_meta['id']
     try:

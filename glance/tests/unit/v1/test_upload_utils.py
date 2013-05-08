@@ -84,10 +84,8 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         checksum = "checksum"
 
         image_meta = {'id': unit_test_utils.UUID1,
-                      'size': size,
-            }
+                      'size': size}
         image_data = "blah"
-
 
         store = self.mox.CreateMockAnything()
         store.add(
@@ -95,15 +93,14 @@ class TestUploadUtils(base.StoreClearingUnitTest):
             mox.IgnoreArg(),
             image_meta['size']).AndReturn((location, size, checksum))
 
-
         self.mox.StubOutWithMock(registry, "update_image_metadata")
         update_data = {'checksum': checksum,
                        'size': size}
         registry.update_image_metadata(req.context,
                                        image_meta['id'],
                                        update_data
-                                       ).AndReturn(image_meta.update(
-                                                        update_data))
+                                       ).AndReturn(
+                                           image_meta.update(update_data))
         self.mox.ReplayAll()
 
         actual_meta, actual_loc = upload_utils.upload_data_to_store(req,
@@ -124,10 +121,9 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         checksum = "checksum"
 
         image_meta = {'id': unit_test_utils.UUID1,
-                      'size': size + 1, #Need incorrect size for test
-            }
-        image_data = "blah"
+                      'size': size + 1}  # Need incorrect size for test
 
+        image_data = "blah"
 
         store = self.mox.CreateMockAnything()
         store.add(
@@ -135,22 +131,19 @@ class TestUploadUtils(base.StoreClearingUnitTest):
             mox.IgnoreArg(),
             image_meta['size']).AndReturn((location, size, checksum))
 
-
         self.mox.StubOutWithMock(registry, "update_image_metadata")
         update_data = {'checksum': checksum}
         registry.update_image_metadata(req.context,
                                        image_meta['id'],
                                        update_data
-                                       ).AndReturn(image_meta.update(
-                                                        update_data))
+                                       ).AndReturn(
+                                           image_meta.update(update_data))
 
         self.mox.ReplayAll()
 
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          upload_utils.upload_data_to_store, req,
-                                   image_meta,
-                                   image_data,
-                                   store)
+                          upload_utils.upload_data_to_store,
+                          req, image_meta, image_data, store)
 
         self.mox.VerifyAll()
 
@@ -162,10 +155,8 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         checksum = "checksum"
 
         image_meta = {'id': unit_test_utils.UUID1,
-                      'size': size,
-            }
+                      'size': size}
         image_data = "blah"
-
 
         store = self.mox.CreateMockAnything()
         store.add(
@@ -173,21 +164,17 @@ class TestUploadUtils(base.StoreClearingUnitTest):
             mox.IgnoreArg(),
             image_meta['size']).AndReturn((location, size, checksum + "NOT"))
 
-
         self.mox.StubOutWithMock(registry, "update_image_metadata")
         update_data = {'checksum': checksum}
         registry.update_image_metadata(req.context,
                                        image_meta['id'],
-                                       update_data
-                                       ).AndReturn(image_meta.update(
-                                                        update_data))
+                                       update_data).AndReturn(
+                                               image_meta.update(update_data))
 
         self.mox.ReplayAll()
 
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          upload_utils.upload_data_to_store, req,
-                                   image_meta,
-                                   image_data,
-                                   store)
+                          upload_utils.upload_data_to_store,
+                          req, image_meta, image_data, store)
 
         self.mox.VerifyAll()
