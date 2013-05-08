@@ -66,6 +66,11 @@ def safe_kill(req, image_id):
 
 
 def upload_data_to_store(req, image_meta, image_data, store):
+    """
+    Upload image data to specified store.
+
+    Upload image data to the store and cleans up on error.
+    """
     image_id = image_meta['id']
     try:
         location, size, checksum = store.add(

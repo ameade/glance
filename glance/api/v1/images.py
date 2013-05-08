@@ -440,96 +440,16 @@ class Controller(controller.BaseController):
         LOG.debug(_("Uploading image data for image %(image_id)s "
                     "to %(scheme)s store"), locals())
 
-        try:
-            self.notifier.info("image.prepare", redact_loc(image_meta))
-            location, size, checksum = store.add(
-                image_meta['id'],
-                utils.CooperativeReader(image_data),
-                image_meta['size'])
+        self.notifier.info("image.prepare", redact_loc(image_meta))
 
-            def _kill_mismatched(image_meta, attr, actual):
-                supplied = image_meta.get(attr)
-                if supplied and supplied != actual:
-                    msg = _("Supplied %(attr)s (%(supplied)s) and "
-                            "%(attr)s generated from uploaded image "
-                            "(%(actual)s) did not match. Setting image "
-                            "status to 'killed'.") % locals()
-                    LOG.error(msg)
-                    upload_utils.safe_kill(req, image_id)
-                    upload_utils.initiate_deletion(req, location, image_id)
-                    raise HTTPBadRequest(explanation=msg,
-                                         content_type="text/plain",
-                                         request=req)
+        image_meta, location = upload_utils.upload_data_to_store(req,
+                                                                 image_meta,
+                                                                 image_data,
+                                                                 store)
 
-            # Verify any supplied size/checksum value matches size/checksum
-            # returned from store when adding image
-            _kill_mismatched(image_meta, 'size', size)
-            _kill_mismatched(image_meta, 'checksum', checksum)
+        self.notifier.info('image.upload', redact_loc(image_meta))
 
-            # Update the database with the checksum returned
-            # from the backend store
-            LOG.debug(_("Updating image %(image_id)s data. "
-                      "Checksum set to %(checksum)s, size set "
-                      "to %(size)d"), locals())
-            update_data = {'checksum': checksum,
-                           'size': size}
-            image_meta = registry.update_image_metadata(req.context,
-                                                        image_id,
-                                                        update_data)
-            self.notifier.info('image.upload', redact_loc(image_meta))
-
-            return location
-
-        except exception.Duplicate as e:
-            msg = _("Attempt to upload duplicate image: %s") % e
-            LOG.debug(msg)
-            upload_utils.safe_kill(req, image_id)
-            raise HTTPConflict(explanation=msg, request=req)
-
-        except exception.Forbidden as e:
-            msg = _("Forbidden upload attempt: %s") % e
-            LOG.debug(msg)
-            upload_utils.safe_kill(req, image_id)
-            raise HTTPForbidden(explanation=msg,
-                                request=req,
-                                content_type="text/plain")
-
-        except exception.StorageFull as e:
-            msg = _("Image storage media is full: %s") % e
-            LOG.error(msg)
-            upload_utils.safe_kill(req, image_id)
-            self.notifier.error('image.upload', msg)
-            raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
-                                            content_type='text/plain')
-
-        except exception.StorageWriteDenied as e:
-            msg = _("Insufficient permissions on image storage media: %s") % e
-            LOG.error(msg)
-            upload_utils.safe_kill(req, image_id)
-            self.notifier.error('image.upload', msg)
-            raise HTTPServiceUnavailable(explanation=msg, request=req,
-                                         content_type='text/plain')
-
-        except exception.ImageSizeLimitExceeded as e:
-            msg = _("Denying attempt to upload image larger than %d bytes."
-                    % CONF.image_size_cap)
-            LOG.info(msg)
-            upload_utils.safe_kill(req, image_id)
-            raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
-                                            content_type='text/plain')
-
-        except HTTPError as e:
-            upload_utils.safe_kill(req, image_id)
-            #NOTE(bcwaldon): Ideally, we would just call 'raise' here,
-            # but something in the above function calls is affecting the
-            # exception context and we must explicitly re-raise the
-            # caught exception.
-            raise e
-
-        except Exception as e:
-            LOG.exception(_("Failed to upload image"))
-            upload_utils.safe_kill(req, image_id)
-            raise HTTPInternalServerError(request=req)
+        return location
 
     def _activate(self, req, image_id, location):
         """
