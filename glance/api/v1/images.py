@@ -412,7 +412,7 @@ class Controller(controller.BaseController):
                 image_data, image_size = self._get_from_store(req.context,
                                                               copy_from)
             except Exception as e:
-                self._safe_kill(req, image_meta['id'])
+                upload_utils.safe_kill(req, image_meta['id'])
                 msg = _("Copy from external source failed: %s") % e
                 LOG.debug(msg)
                 return
@@ -421,7 +421,7 @@ class Controller(controller.BaseController):
             try:
                 req.get_content_type('application/octet-stream')
             except exception.InvalidContentType:
-                self._safe_kill(req, image_meta['id'])
+                upload_utils.safe_kill(req, image_meta['id'])
                 msg = _("Content-Type must be application/octet-stream")
                 LOG.debug(msg)
                 raise HTTPBadRequest(explanation=msg)
@@ -455,7 +455,7 @@ class Controller(controller.BaseController):
                             "(%(actual)s) did not match. Setting image "
                             "status to 'killed'.") % locals()
                     LOG.error(msg)
-                    self._safe_kill(req, image_id)
+                    upload_utils.safe_kill(req, image_id)
                     upload_utils.initiate_deletion(req, location, image_id)
                     raise HTTPBadRequest(explanation=msg,
                                          content_type="text/plain",
@@ -483,13 +483,13 @@ class Controller(controller.BaseController):
         except exception.Duplicate as e:
             msg = _("Attempt to upload duplicate image: %s") % e
             LOG.debug(msg)
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             raise HTTPConflict(explanation=msg, request=req)
 
         except exception.Forbidden as e:
             msg = _("Forbidden upload attempt: %s") % e
             LOG.debug(msg)
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             raise HTTPForbidden(explanation=msg,
                                 request=req,
                                 content_type="text/plain")
@@ -497,7 +497,7 @@ class Controller(controller.BaseController):
         except exception.StorageFull as e:
             msg = _("Image storage media is full: %s") % e
             LOG.error(msg)
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             self.notifier.error('image.upload', msg)
             raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
                                             content_type='text/plain')
@@ -505,7 +505,7 @@ class Controller(controller.BaseController):
         except exception.StorageWriteDenied as e:
             msg = _("Insufficient permissions on image storage media: %s") % e
             LOG.error(msg)
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             self.notifier.error('image.upload', msg)
             raise HTTPServiceUnavailable(explanation=msg, request=req,
                                          content_type='text/plain')
@@ -514,12 +514,12 @@ class Controller(controller.BaseController):
             msg = _("Denying attempt to upload image larger than %d bytes."
                     % CONF.image_size_cap)
             LOG.info(msg)
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
                                             content_type='text/plain')
 
         except HTTPError as e:
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             #NOTE(bcwaldon): Ideally, we would just call 'raise' here,
             # but something in the above function calls is affecting the
             # exception context and we must explicitly re-raise the
@@ -528,7 +528,7 @@ class Controller(controller.BaseController):
 
         except Exception as e:
             LOG.exception(_("Failed to upload image"))
-            self._safe_kill(req, image_id)
+            upload_utils.safe_kill(req, image_id)
             raise HTTPInternalServerError(request=req)
 
     def _activate(self, req, image_id, location):
@@ -558,33 +558,6 @@ class Controller(controller.BaseController):
             raise HTTPBadRequest(explanation=msg,
                                  request=req,
                                  content_type="text/plain")
-
-    def _kill(self, req, image_id):
-        """
-        Marks the image status to `killed`.
-
-        :param req: The WSGI/Webob Request object
-        :param image_id: Opaque image identifier
-        """
-        registry.update_image_metadata(req.context, image_id,
-                                       {'status': 'killed'})
-
-    def _safe_kill(self, req, image_id):
-        """
-        Mark image killed without raising exceptions if it fails.
-
-        Since _kill is meant to be called from exceptions handlers, it should
-        not raise itself, rather it should just log its error.
-
-        :param req: The WSGI/Webob Request object
-        :param image_id: Opaque image identifier
-        """
-        try:
-            self._kill(req, image_id)
-        except Exception as e:
-            LOG.error(_("Unable to kill image %(id)s: "
-                        "%(exc)s") % ({'id': image_id,
-                                       'exc': repr(e)}))
 
     def _upload_and_activate(self, req, image_meta):
         """
