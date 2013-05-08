@@ -1,5 +1,7 @@
 import mox
 
+import webob.exc
+
 from glance.api.v1 import upload_utils
 import glance.registry.client.v1.api as registry
 import glance.store
@@ -71,5 +73,121 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         self.mox.ReplayAll()
 
         upload_utils.safe_kill(req, id)
+
+        self.mox.VerifyAll()
+
+    def test_upload_data_to_store(self):
+        req = unit_test_utils.get_fake_request()
+
+        location = "file://foo/bar"
+        size = 10
+        checksum = "checksum"
+
+        image_meta = {'id': unit_test_utils.UUID1,
+                      'size': size,
+            }
+        image_data = "blah"
+
+
+        store = self.mox.CreateMockAnything()
+        store.add(
+            image_meta['id'],
+            mox.IgnoreArg(),
+            image_meta['size']).AndReturn((location, size, checksum))
+
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        update_data = {'checksum': checksum,
+                       'size': size}
+        registry.update_image_metadata(req.context,
+                                       image_meta['id'],
+                                       update_data
+                                       ).AndReturn(image_meta.update(
+                                                        update_data))
+        self.mox.ReplayAll()
+
+        actual_meta, actual_loc = upload_utils.upload_data_to_store(req,
+                                                                    image_meta,
+                                                                    image_data,
+                                                                    store)
+
+        self.mox.VerifyAll()
+
+        self.assertEqual(actual_loc, location)
+        self.assertEqual(actual_meta, image_meta.update(update_data))
+
+    def test_upload_data_to_store_mismatch_size(self):
+        req = unit_test_utils.get_fake_request()
+
+        location = "file://foo/bar"
+        size = 10
+        checksum = "checksum"
+
+        image_meta = {'id': unit_test_utils.UUID1,
+                      'size': size + 1, #Need incorrect size for test
+            }
+        image_data = "blah"
+
+
+        store = self.mox.CreateMockAnything()
+        store.add(
+            image_meta['id'],
+            mox.IgnoreArg(),
+            image_meta['size']).AndReturn((location, size, checksum))
+
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        update_data = {'checksum': checksum}
+        registry.update_image_metadata(req.context,
+                                       image_meta['id'],
+                                       update_data
+                                       ).AndReturn(image_meta.update(
+                                                        update_data))
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          upload_utils.upload_data_to_store, req,
+                                   image_meta,
+                                   image_data,
+                                   store)
+
+        self.mox.VerifyAll()
+
+    def test_upload_data_to_store_mismatch_checksum(self):
+        req = unit_test_utils.get_fake_request()
+
+        location = "file://foo/bar"
+        size = 10
+        checksum = "checksum"
+
+        image_meta = {'id': unit_test_utils.UUID1,
+                      'size': size,
+            }
+        image_data = "blah"
+
+
+        store = self.mox.CreateMockAnything()
+        store.add(
+            image_meta['id'],
+            mox.IgnoreArg(),
+            image_meta['size']).AndReturn((location, size, checksum + "NOT"))
+
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        update_data = {'checksum': checksum}
+        registry.update_image_metadata(req.context,
+                                       image_meta['id'],
+                                       update_data
+                                       ).AndReturn(image_meta.update(
+                                                        update_data))
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          upload_utils.upload_data_to_store, req,
+                                   image_meta,
+                                   image_data,
+                                   store)
 
         self.mox.VerifyAll()
