@@ -3,6 +3,7 @@ import mox
 import webob.exc
 
 from glance.api.v1 import upload_utils
+from glance.common import exception
 import glance.registry.client.v1.api as registry
 import glance.store
 from glance.tests.unit import base
@@ -87,6 +88,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
                       'size': size}
         image_data = "blah"
 
+        notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
         store.add(
             image_meta['id'],
@@ -106,7 +108,8 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         actual_meta, actual_loc = upload_utils.upload_data_to_store(req,
                                                                     image_meta,
                                                                     image_data,
-                                                                    store)
+                                                                    store,
+                                                                    notifier)
 
         self.mox.VerifyAll()
 
@@ -125,6 +128,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         image_data = "blah"
 
+        notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
         store.add(
             image_meta['id'],
@@ -143,7 +147,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           upload_utils.upload_data_to_store,
-                          req, image_meta, image_data, store)
+                          req, image_meta, image_data, store, notifier)
 
         self.mox.VerifyAll()
 
@@ -158,6 +162,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
                       'size': size}
         image_data = "blah"
 
+        notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
         store.add(
             image_meta['id'],
@@ -175,6 +180,107 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           upload_utils.upload_data_to_store,
-                          req, image_meta, image_data, store)
+                          req, image_meta, image_data, store, notifier)
 
         self.mox.VerifyAll()
+
+    def _test_upload_data_to_store_exception(self, exc_class, expected_class):
+        req = unit_test_utils.get_fake_request()
+
+        location = "file://foo/bar"
+        size = 10
+        checksum = "checksum"
+
+        image_meta = {'id': unit_test_utils.UUID1,
+                      'size': size}
+        image_data = "blah"
+
+        notifier = self.mox.CreateMockAnything()
+        store = self.mox.CreateMockAnything()
+        store.add(
+            image_meta['id'],
+            mox.IgnoreArg(),
+            image_meta['size']).AndRaise(exc_class)
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        update_data = {'status': "killed"}
+        registry.update_image_metadata(req.context,
+                                       image_meta['id'],
+                                       update_data
+                                       )
+        self.mox.ReplayAll()
+
+        self.assertRaises(expected_class,
+                          upload_utils.upload_data_to_store,
+                          req, image_meta, image_data, store, notifier)
+
+        self.mox.VerifyAll()
+
+    def _test_upload_data_to_store_exception_with_notify(self,
+                                                         exc_class,
+                                                         expected_class):
+        req = unit_test_utils.get_fake_request()
+
+        location = "file://foo/bar"
+        size = 10
+        checksum = "checksum"
+
+        image_meta = {'id': unit_test_utils.UUID1,
+                      'size': size}
+        image_data = "blah"
+
+        store = self.mox.CreateMockAnything()
+        store.add(
+            image_meta['id'],
+            mox.IgnoreArg(),
+            image_meta['size']).AndRaise(exc_class)
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        update_data = {'status': "killed"}
+        registry.update_image_metadata(req.context,
+                                       image_meta['id'],
+                                       update_data
+                                       )
+
+        notifier = self.mox.CreateMockAnything()
+        notifier.error('image.upload', mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.assertRaises(expected_class,
+                          upload_utils.upload_data_to_store,
+                          req, image_meta, image_data, store, notifier)
+
+        self.mox.VerifyAll()
+
+    def test_upload_data_to_store_duplicate(self):
+        self._test_upload_data_to_store_exception(exception.Duplicate,
+                                                  webob.exc.HTTPConflict)
+
+    def test_upload_data_to_store_forbidden(self):
+        self._test_upload_data_to_store_exception(exception.Forbidden,
+                                                  webob.exc.HTTPForbidden)
+
+    def test_upload_data_to_store_storage_full(self):
+        self._test_upload_data_to_store_exception_with_notify(
+                                        exception.StorageFull,
+                                        webob.exc.HTTPRequestEntityTooLarge)
+
+    def test_upload_data_to_store_storage_write_denied(self):
+        self._test_upload_data_to_store_exception_with_notify(
+                                        exception.StorageWriteDenied,
+                                        webob.exc.HTTPServiceUnavailable)
+
+    def test_upload_data_to_store_size_limit_exceeded(self):
+        self._test_upload_data_to_store_exception(
+                                        exception.ImageSizeLimitExceeded,
+                                        webob.exc.HTTPRequestEntityTooLarge)
+
+    def test_upload_data_to_store_http_error(self):
+        self._test_upload_data_to_store_exception(
+                                        webob.exc.HTTPError,
+                                        webob.exc.HTTPError)
+
+    def test_upload_data_to_store_exception(self):
+        self._test_upload_data_to_store_exception(
+                                        Exception,
+                                        webob.exc.HTTPInternalServerError)

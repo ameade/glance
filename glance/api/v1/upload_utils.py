@@ -65,7 +65,7 @@ def safe_kill(req, image_id):
                                    'exc': repr(e)}))
 
 
-def upload_data_to_store(req, image_meta, image_data, store):
+def upload_data_to_store(req, image_meta, image_data, store, notifier):
     """
     Upload image data to specified store.
 
@@ -126,7 +126,7 @@ def upload_data_to_store(req, image_meta, image_data, store):
         msg = _("Image storage media is full: %s") % e
         LOG.error(msg)
         safe_kill(req, image_id)
-        self.notifier.error('image.upload', msg)
+        notifier.error('image.upload', msg)
         raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
                                         content_type='text/plain')
 
@@ -134,7 +134,7 @@ def upload_data_to_store(req, image_meta, image_data, store):
         msg = _("Insufficient permissions on image storage media: %s") % e
         LOG.error(msg)
         safe_kill(req, image_id)
-        self.notifier.error('image.upload', msg)
+        notifier.error('image.upload', msg)
         raise HTTPServiceUnavailable(explanation=msg, request=req,
                                      content_type='text/plain')
 

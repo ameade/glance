@@ -445,7 +445,8 @@ class Controller(controller.BaseController):
         image_meta, location = upload_utils.upload_data_to_store(req,
                                                                  image_meta,
                                                                  image_data,
-                                                                 store)
+                                                                 store,
+                                                                 self.notifier)
 
         self.notifier.info('image.upload', redact_loc(image_meta))
 
