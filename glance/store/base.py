@@ -110,6 +110,9 @@ class Store(object):
         """
         raise exception.StoreAddDisabled
 
+    def get_location_uri(self, image_id):
+        raise NotImplementedError
+
     def add(self, image_id, image_file, image_size):
         """
         Stores an image file with supplied identifier to the backend

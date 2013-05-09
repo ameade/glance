@@ -64,7 +64,7 @@ def _kill(req, image_id):
                                    {'status': 'killed'})
 
 
-def safe_kill(req, image_id):
+def safe_kill(req, image_id, location=None):
     """
     Mark image killed without raising exceptions if it fails.
 
@@ -81,6 +81,14 @@ def safe_kill(req, image_id):
                     "%(exc)s") % ({'id': image_id,
                                    'exc': repr(e)}))
 
+    if location:
+        try:
+            initiate_deletion(req, location, image_id)
+        except Exception as e:
+            LOG.warn(_("Unable to delete image %(id)s from data store: "
+                       "%(exc)s") % ({'id': image_id,
+                                      'exc': repr(e)}))
+
 
 def upload_data_to_store(req, image_meta, image_data, store, notifier):
     """
@@ -89,6 +97,11 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
     Upload image data to the store and cleans up on error.
     """
     image_id = image_meta['id']
+    try:
+        location = store.get_location_uri(image_id)
+    except NotImplementedError:
+        location = None
+
     try:
         location, size, checksum = store.add(
             image_meta['id'],
@@ -128,13 +141,15 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
     except exception.Duplicate as e:
         msg = _("Attempt to upload duplicate image: %s") % e
         LOG.debug(msg)
+        # NOTE(ameade): We do not pass a location here because we do not
+        # want to delete the other images data in the store
         safe_kill(req, image_id)
         raise HTTPConflict(explanation=msg, request=req)
 
     except exception.Forbidden as e:
         msg = _("Forbidden upload attempt: %s") % e
         LOG.debug(msg)
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         raise HTTPForbidden(explanation=msg,
                             request=req,
                             content_type="text/plain")
@@ -142,7 +157,7 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
     except exception.StorageFull as e:
         msg = _("Image storage media is full: %s") % e
         LOG.error(msg)
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         notifier.error('image.upload', msg)
         raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
                                         content_type='text/plain')
@@ -150,7 +165,7 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
     except exception.StorageWriteDenied as e:
         msg = _("Insufficient permissions on image storage media: %s") % e
         LOG.error(msg)
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         notifier.error('image.upload', msg)
         raise HTTPServiceUnavailable(explanation=msg, request=req,
                                      content_type='text/plain')
@@ -159,12 +174,12 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
         msg = _("Denying attempt to upload image larger than %d bytes."
                 % CONF.image_size_cap)
         LOG.info(msg)
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         raise HTTPRequestEntityTooLarge(explanation=msg, request=req,
                                         content_type='text/plain')
 
     except HTTPError as e:
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         #NOTE(bcwaldon): Ideally, we would just call 'raise' here,
         # but something in the above function calls is affecting the
         # exception context and we must explicitly re-raise the
@@ -173,7 +188,7 @@ def upload_data_to_store(req, image_meta, image_data, store, notifier):
 
     except Exception as e:
         LOG.exception(_("Failed to upload image"))
-        safe_kill(req, image_id)
+        safe_kill(req, image_id, location=location)
         raise HTTPInternalServerError(request=req)
 
     return image_meta, location

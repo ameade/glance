@@ -83,6 +83,15 @@ class TestStore(base.IsolatedUnitTest):
                           self.store.get,
                           loc)
 
+    def test_get_location_uri(self):
+        image_id = uuidutils.generate_uuid()
+        expected_location = "file://%s/%s" % (self.test_dir,
+                                              image_id)
+
+        location = self.store.get_location_uri(image_id)
+
+        self.assertEquals(expected_location, location)
+
     def test_add(self):
         """Test that we can add an image via the filesystem backend"""
         ChunkedFile.CHUNKSIZE = 1024

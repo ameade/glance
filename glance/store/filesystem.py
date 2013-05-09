@@ -202,6 +202,10 @@ class Store(glance.store.base.Store):
         else:
             raise exception.NotFound(_("Image file %s does not exist") % fn)
 
+    def get_location_uri(self, image_id):
+        filepath = os.path.join(self.datadir, str(image_id))
+        return "file://%s" % filepath
+
     def add(self, image_id, image_file, image_size):
         """
         Stores an image file with supplied identifier to the backend

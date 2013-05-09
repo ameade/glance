@@ -226,6 +226,18 @@ class TestStore(base.StoreClearingUnitTest):
         loc = get_location_from_uri(uri)
         self.assertRaises(exception.NotFound, self.store.get, loc)
 
+    def test_get_location_uri(self):
+        image_id = uuidutils.generate_uuid()
+        expected_location = format_s3_location(
+            S3_CONF['s3_store_access_key'],
+            S3_CONF['s3_store_secret_key'],
+            S3_CONF['s3_store_host'],
+            S3_CONF['s3_store_bucket'],
+            image_id)
+
+        location = self.store.get_location_uri(image_id)
+        self.assertEquals(expected_location, location)
+
     def test_add(self):
         """Test that we can add an image via the s3 backend"""
         expected_image_id = uuidutils.generate_uuid()

@@ -79,6 +79,22 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         self.mox.VerifyAll()
 
+    def test_safe_kill_with_location(self):
+        req = unit_test_utils.get_fake_request()
+        id = unit_test_utils.UUID1
+        location = "file://foo/bar"
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        registry.update_image_metadata(req.context, id, {'status': 'killed'})
+
+        self.mox.StubOutWithMock(upload_utils, "initiate_deletion")
+        upload_utils.initiate_deletion(req, location, id)
+        self.mox.ReplayAll()
+
+        upload_utils.safe_kill(req, id, location=location)
+
+        self.mox.VerifyAll()
+
     def test_safe_kill_with_error(self):
         req = unit_test_utils.get_fake_request()
         id = unit_test_utils.UUID1
@@ -91,6 +107,23 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         self.mox.ReplayAll()
 
         upload_utils.safe_kill(req, id)
+
+        self.mox.VerifyAll()
+
+    def test_safe_kill_with_data_error(self):
+        req = unit_test_utils.get_fake_request()
+        id = unit_test_utils.UUID1
+        location = "file://foo/bar"
+
+        self.mox.StubOutWithMock(registry, "update_image_metadata")
+        registry.update_image_metadata(req.context, id, {'status': 'killed'})
+
+        self.mox.StubOutWithMock(upload_utils, "initiate_deletion")
+        upload_utils.initiate_deletion(req, location, id).AndRaise(
+                                                            Exception())
+        self.mox.ReplayAll()
+
+        upload_utils.safe_kill(req, id, location=location)
 
         self.mox.VerifyAll()
 
@@ -107,6 +140,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
+        store.get_location_uri(image_meta['id']).AndReturn(location)
         store.add(
             image_meta['id'],
             mox.IgnoreArg(),
@@ -147,6 +181,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
+        store.get_location_uri(image_meta['id']).AndReturn(location)
         store.add(
             image_meta['id'],
             mox.IgnoreArg(),
@@ -181,6 +216,7 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
+        store.get_location_uri(image_meta['id']).AndReturn(location)
         store.add(
             image_meta['id'],
             mox.IgnoreArg(),
@@ -201,7 +237,10 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         self.mox.VerifyAll()
 
-    def _test_upload_data_to_store_exception(self, exc_class, expected_class):
+    def _test_upload_data_to_store_exception(self,
+                                             exc_class,
+                                             expected_class,
+                                             delete_data=True):
         req = unit_test_utils.get_fake_request()
 
         location = "file://foo/bar"
@@ -214,13 +253,18 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
         notifier = self.mox.CreateMockAnything()
         store = self.mox.CreateMockAnything()
+        store.get_location_uri(image_meta['id']).AndReturn(location)
         store.add(
             image_meta['id'],
             mox.IgnoreArg(),
             image_meta['size']).AndRaise(exc_class)
 
         self.mox.StubOutWithMock(upload_utils, "safe_kill")
-        upload_utils.safe_kill(req, image_meta['id'])
+        if delete_data:
+            upload_utils.safe_kill(req, image_meta['id'], location=location)
+        else:
+            upload_utils.safe_kill(req, image_meta['id'])
+
         self.mox.ReplayAll()
 
         self.assertRaises(expected_class,
@@ -243,13 +287,14 @@ class TestUploadUtils(base.StoreClearingUnitTest):
         image_data = "blah"
 
         store = self.mox.CreateMockAnything()
+        store.get_location_uri(image_meta['id']).AndReturn(location)
         store.add(
             image_meta['id'],
             mox.IgnoreArg(),
             image_meta['size']).AndRaise(exc_class)
 
         self.mox.StubOutWithMock(upload_utils, "safe_kill")
-        upload_utils.safe_kill(req, image_meta['id'])
+        upload_utils.safe_kill(req, image_meta['id'], location=location)
 
         notifier = self.mox.CreateMockAnything()
         notifier.error('image.upload', mox.IgnoreArg())
@@ -263,7 +308,8 @@ class TestUploadUtils(base.StoreClearingUnitTest):
 
     def test_upload_data_to_store_duplicate(self):
         self._test_upload_data_to_store_exception(exception.Duplicate,
-                                                  webob.exc.HTTPConflict)
+                                                  webob.exc.HTTPConflict,
+                                                  delete_data=False)
 
     def test_upload_data_to_store_forbidden(self):
         self._test_upload_data_to_store_exception(exception.Forbidden,

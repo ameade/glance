@@ -222,6 +222,9 @@ class Store(glance.store.base.Store):
             librbd.create(ioctx, name, size, order, old_format=True)
             return StoreLocation({'image': name})
 
+    def get_location_uri(self, image_id):
+        return StoreLocation({'image': image_id}).get_uri()
+
     def add(self, image_id, image_file, image_size):
         """
         Stores an image file with supplied identifier to the backend

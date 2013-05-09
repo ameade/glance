@@ -321,6 +321,10 @@ class BaseStore(glance.store.base.Store):
                 msg = _("Failed to delete orphaned chunk %s/%s")
                 LOG.exception(msg, container, chunk)
 
+    def get_location_uri(self, image_id):
+        location = self.create_location(image_id)
+        return location.get_uri()
+
     def add(self, image_id, image_file, image_size, connection=None):
         location = self.create_location(image_id)
         if not connection:

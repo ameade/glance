@@ -156,6 +156,9 @@ class Store(glance.store.base.Store):
             LOG.debug(msg)
             raise exception.NotFound(msg)
 
+    def get_location_uri(self, image_id):
+        return StoreLocation({'image_id': image_id}).get_uri()
+
     def add(self, image_id, image_file, image_size):
         """
         Stores an image file with supplied identifier to the backend

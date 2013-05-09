@@ -315,6 +315,18 @@ class Store(glance.store.base.Store):
 
         return key
 
+    def _create_location(self, image_id):
+        loc = StoreLocation({'scheme': self.scheme,
+                             'bucket': self.bucket,
+                             'key': image_id,
+                             's3serviceurl': self.full_s3_host,
+                             'accesskey': self.access_key,
+                             'secretkey': self.secret_key})
+        return loc
+
+    def get_location_uri(self, image_id):
+        return self._create_location(image_id).get_uri()
+
     def add(self, image_id, image_file, image_size):
         """
         Stores an image file with supplied identifier to the backend
@@ -340,12 +352,7 @@ class Store(glance.store.base.Store):
         """
         from boto.s3.connection import S3Connection
 
-        loc = StoreLocation({'scheme': self.scheme,
-                             'bucket': self.bucket,
-                             'key': image_id,
-                             's3serviceurl': self.full_s3_host,
-                             'accesskey': self.access_key,
-                             'secretkey': self.secret_key})
+        loc = self._create_location(image_id)
 
         s3_conn = S3Connection(loc.accesskey, loc.secretkey,
                                host=loc.s3serviceurl,

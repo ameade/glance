@@ -274,6 +274,15 @@ class SwiftTests(object):
                           self.store.get,
                           loc)
 
+    def test_get_location_uri(self):
+        image_id = uuidutils.generate_uuid()
+        loc = 'swift+https://%s:key@localhost:8080/glance/%s'
+        expected_location = loc % (self.swift_store_user,
+                                   image_id)
+        location = self.store.get_location_uri(image_id)
+
+        self.assertEquals(expected_location, location)
+
     def test_add(self):
         """Test that we can add an image via the swift backend"""
         expected_swift_size = FIVE_KB
