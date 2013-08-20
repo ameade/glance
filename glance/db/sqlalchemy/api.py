@@ -1110,3 +1110,98 @@ def user_get_storage_usage(context, owner_id, image_id=None, session=None):
     total_size = _image_get_disk_usage_by_owner(
         owner_id, session, image_id=image_id)
     return total_size
+
+def task_create(context, values, session=None):
+    """Create a task object"""
+    task_ref = models.Task()
+    _task_update(context, task_ref, values, session=session)
+    return _task_format(task_ref)
+
+
+def task_update(context, task_id, values, purge_props=False):
+    """Update a task object"""
+    session = _get_session()
+    task_ref = _task_get(context, task_id, session)
+    _task_update(context, task_ref, values, session)
+    return _task_format(task_ref)
+
+
+def task_get(context, task_id, session=None):
+    """Fetch an task entity by id"""
+    task_ref = _task_get(context, task_id, session=session)
+    return _task_format(task_ref)
+
+
+def task_get_all(context, filters=None, marker=None, limit=None,
+                 sort_key='created_at', sort_dir='desc'):
+    """
+    Get all tasks that match zero or more filters.
+
+    :param filters: dict of filter keys and values. If a 'properties'
+                    key is present, it is treated as a dict of key/value
+                    filters on the image properties attribute
+    :param marker: image id after which to start page
+    :param limit: maximum number of images to return
+    :param sort_key: image attribute by which results should be sorted
+    :param sort_dir: direction in which results should be sorted (asc, desc)
+    :return: tasks set
+    """
+    filters = filters or {}
+
+    session = _get_session()
+    query = session.query(models.Task)
+
+    for (k, v) in filters.items():
+        if v is not None:
+            key = k
+            if hasattr(models.Task, key):
+                query = query.filter(getattr(models.Task, key) == v)
+
+    marker_task = None
+    if marker is not None:
+        marker_task = _task_get(context, marker)
+
+    sort_keys = ['created_at', 'id']
+    if sort_key not in sort_keys:
+        sort_keys.insert(0, sort_key)
+
+    query = _paginate_query(query, models.Task, limit,
+                            sort_keys,
+                            marker=marker_task,
+                            sort_dir=sort_dir)
+
+    return [_task_format(task) for task in query.all()]
+
+
+def _task_get(context, task_id, session, force_show_deleted=False):
+    """Fetch an task entity by id"""
+    session = session or _get_session()
+    query = session.query(models.Task)
+    query = query.filter_by(id=task_id)
+    if not force_show_deleted and not _can_show_deleted(context):
+        query = query.filter_by(deleted=False)
+    return query.one()
+
+
+def _task_update(context, task_ref, values, session=None):
+    """Apply supplied dictionary of values to a task object."""
+    values["deleted"] = False
+    task_ref.update(values)
+    task_ref.save(session=session)
+    return task_ref
+
+
+def _task_format(task_ref):
+    """Format a task ref for consumption outside of this module"""
+    return {
+        'id': task_ref['id'],
+        'type': task_ref['type'],
+        'status': task_ref['status'],
+        'input': task_ref['input'],
+        'result': task_ref['result'],
+        'owner': task_ref['owner'],
+        'message': task_ref['message'],
+        'expires_at': task_ref['expires_at'],
+        'created_at': task_ref['created_at'],
+        'updated_at': task_ref['updated_at']
+    }

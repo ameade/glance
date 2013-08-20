@@ -188,3 +188,72 @@ class ImageMemberFactory(object):
         return ImageMembership(image_id=image.image_id, member_id=member_id,
                                created_at=created_at, updated_at=updated_at,
                                status='pending')
+
+
+class Task(object):
+    def __init__(self, task_id, type, status, input, result, owner, message,
+                 expires_at, created_at, updated_at, runner=None):
+        if type not in ('import'):
+            raise exception.InvalidTaskType(type)
+
+        if status not in ('pending', 'success', 'failure', 'inprogress'):
+            raise exception.InvalidTaskStatus(status)
+        self.task_id = task_id
+        self._status = status
+        self.type = type
+        self.input = input
+        self.result = result
+        self.owner = owner
+        self.message = message
+        self.expires_at = expires_at
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self._runner = runner
+
+    @property
+    def status(self):
+        return self._status
+
+    def run(self):
+        self._status = 'processing'
+        self._runner.run(self)
+
+    def kill(self, message=None):
+        pass
+
+    def complete(self, result):
+        self._status = 'success'
+        self.result = result
+
+    def fail(self, message):
+        self._status = 'failure'
+        self.message = message
+
+
+class TaskFactory(object):
+    def new_task(self, request, task):
+        if not request:
+            raise TypeError('new_task() takes at least one argument'
+                            ' (\'request\')')
+
+        task_id = uuidutils.generate_uuid()
+        type = task['type']
+        status = 'pending'
+        input = task['input']
+        result = None
+        owner = request.context.owner
+        message = None
+        expires_at = None  # depends on the expire policy ???
+        created_at = timeutils.utcnow()
+        updated_at = created_at
+        runner = TaskRunnerInterface()
+        return Task(task_id, type, status, input, result, owner, message,
+                    expires_at, created_at, updated_at, runner)
+
+
+class TaskRunnerInterface(object):
+    def run(self, task):
+        pass
+
+    def kill(self, task):
+        pass

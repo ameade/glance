@@ -287,3 +287,11 @@ class ImageSizeLimitExceeded(GlanceException):
 
 class RPCError(GlanceException):
     message = _("%(cls)s exception was raised in the last rpc call: %(val)s")
+
+
+class InvalidTaskStatus(GlanceException):
+    message = _("Provided status of task is unsupported: %(status)s")
+
+
+class InvalidTaskType(GlanceException):
+    message = _("Provided type of task is unsupported: %(type)s")
