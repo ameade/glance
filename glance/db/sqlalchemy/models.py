@@ -20,12 +20,15 @@
 SQLAlchemy models for glance data
 """
 
+import json
+
 from sqlalchemy import Column, Integer, String, BigInteger
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, PickleType
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Index, UniqueConstraint
+from sqlalchemy.types import TypeDecorator
 
 from glance.openstack.common import timeutils
 from glance.openstack.common import uuidutils
@@ -36,6 +39,22 @@ BASE = declarative_base()
 @compiles(BigInteger, 'sqlite')
 def compile_big_int_sqlite(type_, compiler, **kw):
     return 'INTEGER'
+
+
+class JSONEncodedDict(TypeDecorator):
+    "Represents an immutable structure as a json-encoded string."
+
+    impl = Text
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
 
 
 class ModelBase(object):
@@ -193,6 +212,24 @@ class ImageMember(BASE, ModelBase):
     member = Column(String(255), nullable=False)
     can_share = Column(Boolean, nullable=False, default=False)
     status = Column(String(20), nullable=False, default="pending")
+
+
+class Task(BASE, ModelBase):
+    """Represents an task in the datastore"""
+    __tablename__ = 'tasks'
+    __table_args__ = (Index('ix_tasks_type', 'type'),
+                      Index('ix_tasks_status', 'status'),
+                      Index('ix_tasks_owner', 'owner'),
+                      Index('ix_tasks_deleted', 'deleted'))
+
+    id = Column(String(36), primary_key=True, default=uuidutils.generate_uuid)
+    type = Column(String(30))
+    status = Column(String(30))
+    input = Column(JSONEncodedDict())
+    result = Column(JSONEncodedDict())
+    owner = Column(String(255))
+    message = Column(Text)
+    expires_at = Column(DateTime, nullable=True)
 
 
 def register_models(engine):

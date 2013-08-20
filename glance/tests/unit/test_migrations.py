@@ -774,3 +774,27 @@ class TestMigrations(utils.BaseTestCase):
                       for idx in new_table.indexes]
 
         self.assertIn((index, columns), index_data)
+
+    def _check_028(self, engine, data):
+        table = "tasks"
+        index_type = ('ix_tasks_type', ['type'])
+        index_status = ('ix_tasks_status', ['status'])
+        index_owner = ('ix_tasks_owner', ['owner'])
+        index_deleted = ('ix_tasks_deleted', ['deleted'])
+
+        meta = sqlalchemy.MetaData()
+        meta.bind = engine
+
+        tasks_table = sqlalchemy.Table(table, meta, autoload=True)
+
+        index_data = [(idx.name, idx.columns.keys())
+                      for idx in tasks_table.indexes]
+
+        self.assertIn(index_type, index_data)
+        self.assertIn(index_status, index_data)
+        self.assertIn(index_owner, index_data)
+        self.assertIn(index_deleted, index_data)
+
+    def _post_downgrade_028(self, engine):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          get_table, engine, 'tasks')
