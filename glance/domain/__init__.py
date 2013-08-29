@@ -1,4 +1,4 @@
-# Copyright 2012 OpenStack Foundation
+# Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,7 @@ from oslo.config import cfg
 from glance.common import exception
 from glance.openstack.common import timeutils
 from glance.openstack.common import uuidutils
+from glance.domain.async import import_executor
 
 
 image_format_opts = [
@@ -192,7 +193,7 @@ class ImageMemberFactory(object):
 
 class Task(object):
     def __init__(self, task_id, type, status, input, result, owner, message,
-                 expires_at, created_at, updated_at, runner=None):
+                 expires_at, created_at, updated_at, executor=None):
         if type not in ('import'):
             raise exception.InvalidTaskType(type)
 
@@ -208,7 +209,7 @@ class Task(object):
         self.expires_at = expires_at
         self.created_at = created_at
         self.updated_at = updated_at
-        self._runner = runner
+        self._executor = executor
 
     @property
     def status(self):
@@ -216,7 +217,7 @@ class Task(object):
 
     def run(self):
         self._status = 'processing'
-        self._runner.run(self)
+        self._executor.run(self)
 
     def kill(self, message=None):
         pass
@@ -231,29 +232,29 @@ class Task(object):
 
 
 class TaskFactory(object):
-    def new_task(self, request, task):
+    def new_task(self, request, task_dict):
         if not request:
             raise TypeError('new_task() takes at least one argument'
                             ' (\'request\')')
 
         task_id = uuidutils.generate_uuid()
-        type = task['type']
+        type = task_dict['type']
         status = 'pending'
-        input = task['input']
+        input = task_dict['input']
         result = None
         owner = request.context.owner
         message = None
         expires_at = None  # depends on the expire policy ???
         created_at = timeutils.utcnow()
         updated_at = created_at
-        runner = TaskRunnerInterface()
+        executor = TaskExecutorFactory().new_task_executor(request, task_dict)
         return Task(task_id, type, status, input, result, owner, message,
-                    expires_at, created_at, updated_at, runner)
+                    expires_at, created_at, updated_at, executor)
 
 
-class TaskRunnerInterface(object):
-    def run(self, task):
-        pass
+class TaskExecutorFactory(object):
+    def new_task_executor(self, request, task_dict):
+       if task_dict['type'] == 'import':
+           return import_executor.TaskImportExecutor(request)
 
-    def kill(self, task):
-        pass
+       raise exception.InvalidTaskType(type=task_dict['type'])

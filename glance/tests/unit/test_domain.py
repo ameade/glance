@@ -15,6 +15,8 @@
 
 from glance.common import exception
 from glance import domain
+from glance.domain.async import import_executor
+import glance.tests.unit.utils as unit_utils
 import glance.tests.utils as test_utils
 
 
@@ -191,3 +193,28 @@ class TestImageMemberFactory(test_utils.BaseTestCase):
         self.assertEqual(image_member.created_at, image_member.updated_at)
         self.assertEqual(image_member.status, 'pending')
         self.assertTrue(image_member.member_id is not None)
+
+
+class TestTaskExecutorFactory(test_utils.BaseTestCase):
+
+    def setUp(self):
+        super(TestTaskExecutorFactory, self).setUp()
+        self.request = unit_utils.get_fake_request()
+        self.executor_factory = domain.TaskExecutorFactory()
+
+    def test_new_task_executor_task_type_import(self):
+        task_dict = {'type': 'import'}
+
+        executor = self.executor_factory.new_task_executor(self.request,
+            task_dict)
+
+        self.assertTrue(isinstance(executor, import_executor.TaskImportExecutor))
+        self.assertEqual(executor.request, self.request)
+
+    def test_new_task_executor_invalid_task_type(self):
+        task_dict = {'type': 'invalid'}
+
+        executor = self.executor_factory.new_task_executor
+
+        self.assertRaises(exception.InvalidTaskType, executor, self.request,
+            task_dict)

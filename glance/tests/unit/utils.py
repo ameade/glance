@@ -202,3 +202,9 @@ class FakeNotifier(object):
 
     def get_logs(self):
         return self.log
+
+
+class FakeTask(object):
+    def __init__(self, task_id, type):
+        self.task_id = task_id
+        self.type = type
