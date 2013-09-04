@@ -28,6 +28,9 @@ from glance.common import wsgi
 from glance.common import exception
 from glance.common import utils
 from glance.openstack.common import timeutils
+import glance.openstack.common.log as logging
+
+LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 
@@ -47,16 +50,19 @@ class TasksController(object):
 
     @utils.mutating
     def create(self, req, task):
-        task_factory = self.gateway.get_task_factory(req.context)
-        task_repo = self.gateway.get_task_repo(req.context)
         try:
-            task = task_factory.new_task(req, task)
-            task_repo.add(task)
-            task.run()
-        except exception.Forbidden as e:
-            raise webob.exc.HTTPForbidden(explanation=unicode(e))
+            task_factory = self.gateway.get_task_factory(req.context)
+            task_repo = self.gateway.get_task_repo(req.context)
+            try:
+                task = task_factory.new_task(req, task, self.gateway)
+                task_repo.add(task)
+                task.run()
+            except exception.Forbidden as e:
+                raise webob.exc.HTTPForbidden(explanation=unicode(e))
 
-        return task
+            return task
+        except Exception as e:
+            LOG.exception("WTF")
 
     def index(self, req, marker=None, limit=None, sort_key='created_at',
               sort_dir='desc', filters=None):

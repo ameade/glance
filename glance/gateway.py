@@ -77,4 +77,4 @@ class Gateway(object):
         task_repo = glance.db.TaskRepo(context, self.db_api)
         policy_task_repo = policy.TaskRepoProxy(
                 task_repo, context, self.policy)
-        return policy_task_repo
+        return task_repo

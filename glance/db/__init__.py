@@ -279,7 +279,7 @@ class TaskRepo(object):
         )
 
     def _format_task_to_db(self, task):
-        task = {'task_id': task.task_id,
+        task = {'id': task.task_id,
                 'type': task.type,
                 'status': task.status,
                 'input': task.input,
@@ -324,5 +324,16 @@ class TaskRepo(object):
         task_values['updated_at'] = task.updated_at
         new_values = self.db_api.task_create(self.context, task_values)
         task.created_at = new_values['created_at']
+        task.updated_at = new_values['updated_at']
+        return self._format_task_from_db(new_values)
+
+    def save(self, task):
+        task_values = self._format_task_to_db(task)
+        try:
+            new_values = self.db_api.task_update(self.context,
+                                                 task.task_id,
+                                                 task_values)
+        except (exception.NotFound, exception.Forbidden):
+            raise exception.NotFound()
         task.updated_at = new_values['updated_at']
         return self._format_task_from_db(new_values)

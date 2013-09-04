@@ -381,6 +381,10 @@ class TaskRepoProxy(glance.domain.proxy.Repo):
         #self.policy.enforce(self.context, 'add_task', {})
         return super(TaskRepoProxy, self).add(task)
 
+    def save(self, task):
+        #self.policy.enforce(self.context, 'add_task', {})
+        return super(TaskRepoProxy, self).save(task)
+
 
 class TaskFactoryProxy(glance.domain.proxy.TaskFactory):
 
@@ -393,5 +397,5 @@ class TaskFactoryProxy(glance.domain.proxy.TaskFactory):
                                                proxy_class=TaskProxy,
                                                proxy_kwargs=proxy_kwargs)
 
-    def new_task(self, req, task):
-        return super(TaskFactoryProxy, self).new_task(req, task)
+    def new_task(self, req, task, gateway):
+        return super(TaskFactoryProxy, self).new_task(req, task, gateway)

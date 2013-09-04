@@ -161,6 +161,6 @@ class TaskFactory(object):
         self.helper = Helper(proxy_class, proxy_kwargs)
         self.base = base
 
-    def new_task(self, req, task):
-        t = self.base.new_task(req, task)
+    def new_task(self, *args):
+        t = self.base.new_task(*args)
         return self.helper.proxy(t)

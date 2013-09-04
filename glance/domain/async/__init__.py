@@ -15,8 +15,9 @@
 
 
 class TaskExecutorInterface(object):
-    def __init__(self, request):
+    def __init__(self, request, gateway=None):
         self.request = request
+        self.gateway = gateway
 
     def run(self, task):
         raise NotImplementedError("This is meant to be an abstract class")

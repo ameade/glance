@@ -232,7 +232,7 @@ class Task(object):
 
 
 class TaskFactory(object):
-    def new_task(self, request, task_dict):
+    def new_task(self, request, task_dict, gateway):
         if not request:
             raise TypeError('new_task() takes at least one argument'
                             ' (\'request\')')
@@ -247,14 +247,15 @@ class TaskFactory(object):
         expires_at = None  # depends on the expire policy ???
         created_at = timeutils.utcnow()
         updated_at = created_at
-        executor = TaskExecutorFactory().new_task_executor(request, task_dict)
+        executor = TaskExecutorFactory().new_task_executor(request, task_dict,
+                                                           gateway)
         return Task(task_id, type, status, input, result, owner, message,
                     expires_at, created_at, updated_at, executor)
 
 
 class TaskExecutorFactory(object):
-    def new_task_executor(self, request, task_dict):
+    def new_task_executor(self, request, task_dict, gateway):
        if task_dict['type'] == 'import':
-           return import_executor.TaskImportExecutor(request)
+           return import_executor.TaskImportExecutor(request, gateway)
 
        raise exception.InvalidTaskType(type=task_dict['type'])
